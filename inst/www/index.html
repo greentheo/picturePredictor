@@ -35,6 +35,11 @@
   <script src="js/underscore-min.js"></script>
   <script src="js/backbone-min.js"></script>
   
+  <!--basic User IDing and tracking-->
+  <script src="js/jquery.cookie.js"></script>
+  <script language="JavaScript" src="http://www.geoplugin.net/javascript.gp" type="text/javascript"></script>
+
+  
   <script type="text/javascript" src="main.js"></script>
   
 </head>
@@ -113,7 +118,9 @@
 				</div>
 				
 			</nav>
-			<div class="jumbotron">
+			<div class="alert alert-success alert-dismissible" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        
 				<h1>
 					Picture Predictor
 				</h1>
@@ -126,32 +133,31 @@
 				<p>
 					<a class="btn btn-primary btn-large" href="#">Learn more</a>
 				</p>
-			</div>
+			
+      </div>
 		</div>
 	</div>
 	<div class="row clearfix">
-		<div class="col-md-4 column">
-		</div>
-		<div class="col-md-4 column">
+		<div class="col-lg-9 column">
 			<div class="row clearfix">
 				<div class="col-md-12 column">
 					<img alt="140x140" src="imgDB/dogs/15657682094_d5be7fa22e_z.jpg" align="middle">
 				</div>
 			</div>
 			<div class="row clearfix">
-				<div class="col-md-6 column">
+				<div class="col-lg-6 column">
           <a href="#" class="firstpicture">
 					<img alt="140x140" src="imgDB/dogs/15657682094_d5be7fa22e_q.jpg" align="left">
           </a>
 				</div>
-				<div class="col-md-6 column">
+				<div class="col-lg-6 column">
           <a href="#" class="secondpicture">
 					<img alt="140x140" src="imgDB/dogs/15657682094_d5be7fa22e_q.jpg" align="right">
           </a>
 				</div>
 			</div>
 		</div>
-		<div class="col-md-4 column">
+		<div class="col-lg-3 column mycontent-left">
       <a href="#" class="sidepicture">
 			<img alt="140x140" src="imgDB/dogs/15657682094_d5be7fa22e_q.jpg" alight="right">
       </a>
