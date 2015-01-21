@@ -1,9 +1,10 @@
 // a set of js functions that run the picture prediction app
 pictures = Backbone.Model.extend({
   defaults:{
-    pictureName: null,
-    pictureLocation: null,
-    user: null
+    pictureName: "NA",
+    pictureLocation: "NA",
+    user: null,
+    pictureTopic: "puppies"
   },
   initialize: function(){
     this.on('change:pictureName', function(model){
@@ -20,6 +21,22 @@ pictures = Backbone.Model.extend({
     })
   },
   pictureClick: function(pictureName, pictureLocation){
+    
+    
+    var key="pp:"+this.get('user').UID+":"+Date.now();
+    var userEvent = this.get('user');
+    userEvent.pictureName = pictureName;
+    userEvent.pictureLocation = pictureLocation;
+    userEvent.prevPictureName = this.get('pictureClicked');
+    userEvent.prevPictureLocation = this.get('pictureLocation');
+    userEvent.pictureTopic = this.get('pictureTopic')
+    userEvent.time = Date.now();
+    console.log("http://192.168.15.102:7379/SET/"+key+"/"+saferStringify(userEvent));
+    //push info to DB
+    $.ajax({
+      url: "http://192.168.15.102:7379/SET/"+key+"/"+saferStringify(userEvent),
+      complete: function(data){console.log(data)}
+    });
     this.set({pictureClicked: pictureName});
     this.set({pictureLocation: pictureLocation});
   },
@@ -31,6 +48,7 @@ pictures = Backbone.Model.extend({
 
 
 var pictureBB;
+var apiKey="904cf61ca4fc611d5d618b8b4fcdf732";
 //var editor;
 
 $(document).ready(function() {
@@ -54,24 +72,59 @@ $(document).ready(function() {
   }
   
   //random starting pictures from flickr
-  pAvailable = 
+  results = $.getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key="+apiKey+"&text="+
+        pictureBB.get('pictureTopic')+"&format=json&jsoncallback=?", 
+        function(data){
+          //append the first item to the main picture, the second to the first of the two options... and so on 
+          item = data.photos.photo[0];
+          var photoURL = 'http://farm' + item.farm + '.static.flickr.com/' + item.server + '/' + item.id + '_' + item.secret + '_m.jpg';
+       
+          //get photo info
+          info = $.getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.getSizes&api_key="+apiKey+
+                    "&photo_id="+item.id+
+                    "&format=json&jsoncallback=?", 
+                  function(data){
+                    //get the largest size picture
+                    pic=data.sizes.size[data.sizes.size.length-1];
+                    
+                    //scale height and width to the available size constrained by proportion
+                    //TODO
+                    
+                    var imgCont = '<img src="'+pic.source+'" height="'+pic.height+'" width="'+pic.width+'">';
+                      //append the 'imgCont' variable to the document
+                       $(imgCont).appendTo($('#mainPhoto'));
+                      return {};
+                    });
+          
+          console.log(data)
+        }    
+  );
+  
   
   
   //and do the rest of the app
   
   $('.firstpicture').click(function(event){
     console.log('p1Click');
-    pictureBB.pictureClick('pictureName', 'p1')
+    pictureBB.pictureClick(this.attributes.src.value, 'p1');
   });
   $('.secondpicture').click(function(event){
     //TODO make an OPENCPU call here that basically logs the event 
     //Then trigger the function in the backbone model that the p2 was the last one clicked
     
-    pictureBB.pictureClick( 'the pictures name', 'p2')
+    pictureBB.pictureClick( this.attributes.src.value, 'p2')
     console.log('p2Click');
   })
   $('.sidepicture').click( function(event){
-    pictureBB.pictureClick('picturename', 'p3')
+    pictureBB.pictureClick(this.attributes.src.value, 'sidePicture')
     console.log('sidePClick');
   })
 });
+
+saferStringify = function(obj, replacer, space) {
+    return JSON.stringify(obj, replacer, space).replace(new RegExp('/', 'g'), '||')
+    // Escape u2028 and u2029
+    // http://timelessrepo.com/json-isnt-a-javascript-subset
+    // https://github.com/mapbox/tilestream-pro/issues/1638
+    .replace("\u2028", "\\u2028").replace("\u2029", "\\u2029");
+};
