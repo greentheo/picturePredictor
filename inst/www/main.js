@@ -18,7 +18,10 @@ pictures = Backbone.Model.extend({
     console.log(model.get('pictureLocation'));
     
     //change the pictures
-    })
+    });
+    this.on('change:pictureTopic', function(model){
+      getPics();
+    });
   },
   pictureClick: function(pictureName, pictureLocation){
     
@@ -42,6 +45,9 @@ pictures = Backbone.Model.extend({
   },
   setUser: function(user){
     this.set({user: user});
+  },
+  setPictureTopic: function(string){
+    this.set({pictureTopic: string});
   }
  
 });
@@ -61,45 +67,18 @@ $(document).ready(function() {
     $.cookie('UID', rUID, {expires: 365});
     
     //set some geovariables
-    $.cookie('lat', geoplugin_latitude(), {expires: 365});
+    /*$.cookie('lat', geoplugin_latitude(), {expires: 365});
     $.cookie('long', geoplugin_longitude(), {expires: 365});
     $.cookie('city', geoplugin_city(), {expires: 365});
     $.cookie('region', geoplugin_region(), {expires: 365});
-    $.cookie('country', geoplugin_countryCode(), {expires: 365});
+    $.cookie('country', geoplugin_countryCode(), {expires: 365});*/
     pictureBB.setUser($.cookie());
   }else{
     pictureBB.setUser($.cookie());
   }
   
-  //random starting pictures from flickr
-  results = $.getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key="+apiKey+"&text="+
-        pictureBB.get('pictureTopic')+"&format=json&jsoncallback=?", 
-        function(data){
-          //append the first item to the main picture, the second to the first of the two options... and so on 
-          item = data.photos.photo[0];
-          var photoURL = 'http://farm' + item.farm + '.static.flickr.com/' + item.server + '/' + item.id + '_' + item.secret + '_m.jpg';
-       
-          //get photo info
-          info = $.getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.getSizes&api_key="+apiKey+
-                    "&photo_id="+item.id+
-                    "&format=json&jsoncallback=?", 
-                  function(data){
-                    //get the largest size picture
-                    pic=data.sizes.size[data.sizes.size.length-1];
-                    
-                    //scale height and width to the available size constrained by proportion
-                    //TODO
-                    
-                    var imgCont = '<img src="'+pic.source+'" height="'+pic.height+'" width="'+pic.width+'">';
-                      //append the 'imgCont' variable to the document
-                       $(imgCont).appendTo($('#mainPhoto'));
-                      return {};
-                    });
-          
-          console.log(data)
-        }    
-  );
-  
+  //random starting pictures from flickr "puppies"
+  getPics();
   
   
   //and do the rest of the app
@@ -119,7 +98,66 @@ $(document).ready(function() {
     pictureBB.pictureClick(this.attributes.src.value, 'sidePicture')
     console.log('sidePClick');
   })
+  
+  $('#submitBtn').click(function(e){
+    pictureBB.setPictureTopic($('#searchText').val());
+  });
+  $(document).keypress(function(e) {
+    if(e.which == 13) {
+        pictureBB.setPictureTopic($('#searchText').val());
+    }
+  });
 });
+
+getPics = function(){
+   getPicsSub = function(num, picturePlace, size){
+      $.getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key="+apiKey+"&text="+
+        pictureBB.get('pictureTopic')+"&format=json&jsoncallback=?", 
+        function(data){
+          //append the first item to the main picture, the second to the first of the two options... and so on 
+          item = data.photos.photo[num];
+          var photoURL = 'http://farm' + item.farm + '.static.flickr.com/' + item.server + '/' + item.id + '_' + item.secret + '_m.jpg';
+          //get photo info
+          info = $.getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.getSizes&api_key="+apiKey+
+                    "&photo_id="+item.id+
+                    "&format=json&jsoncallback=?", 
+                  function(data){
+                    //get the largest size picture
+                    switch(size) {
+                        case "small":
+                            pic=data.sizes.size[0];
+                            break;
+                        case "medium":
+                            pic=data.sizes.size[1];
+                            break;
+                        case "large":
+                            pic=data.sizes.size[data.sizes.size.length-1];
+                            break;
+                    }
+                    
+                    //scale height and width to the available size constrained by proportion
+                    //TODO
+                    
+                    var imgCont = '<img src="'+pic.source+'" height="'+pic.height+'" width="'+pic.width+'">';
+                      //append the 'imgCont' variable to the document
+                       //$(imgCont).appendTo($('#mainPhoto'));
+                       picturePlace.html($(imgCont));
+                      return {};
+                    });
+          
+          
+        }    
+  );
+   }
+   getPicsSub(0, $('#mainPhoto'), 'large');
+   getPicsSub(1,$('#firstOption'), 'medium');
+   getPicsSub(2, $('#secondOption'), 'medium');
+   
+   for (i = 0; i < 6; i++) { 
+      //fill in some sidebar options
+      getPicsSub(i+3, $('#side'+i), 'small');
+  }
+}
 
 saferStringify = function(obj, replacer, space) {
     return JSON.stringify(obj, replacer, space).replace(new RegExp('/', 'g'), '||')
