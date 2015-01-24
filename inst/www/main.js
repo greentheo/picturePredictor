@@ -1,55 +1,79 @@
 // a set of js functions that run the picture prediction app
 pictures = Backbone.Model.extend({
   defaults:{
+    prevPictureID: "NA",
+    prevPictureSec: "NA",
+    pictureID: "NA",
+    pictureSec: "NA",
     pictureName: "NA",
     pictureLocation: "NA",
-    user: null,
-    pictureTopic: "puppies"
+    picNum: "NA",
+    user: "NA",
+    pictureTopic: "puppies",
+    pics: null
   },
   initialize: function(){
     this.on('change:pictureName', function(model){
-      //TODO functions that save the last picture that was clicked on triggering
-    //the changes that move the last picture into the main picture frame
-    //and two new suggestions below it...
+      this.pictureClick();
     
-    //log the data
-    console.log(model.get('user'));
-    console.log(model.get('pictureName'));
-    console.log(model.get('pictureLocation'));
-    
-    //change the pictures
     });
     this.on('change:pictureTopic', function(model){
       getPics();
     });
+    this.on('change:pics', function(model){
+      setPics(0);
+    });
   },
-  pictureClick: function(pictureName, pictureLocation){
+  pictureClick: function(){
     
     
     var key="pp:"+this.get('user').UID+":"+Date.now();
     var userEvent = this.get('user');
-    userEvent.pictureName = pictureName;
-    userEvent.pictureLocation = pictureLocation;
-    userEvent.prevPictureName = this.get('pictureClicked');
-    userEvent.prevPictureLocation = this.get('pictureLocation');
-    userEvent.pictureTopic = this.get('pictureTopic')
+    userEvent.pictureName = this.get('pictureName');
+    userEvent.pictureLocation = this.get('pictureLocation');
+    userEvent.pictureTopic = this.get('pictureTopic');
+    userEvent.prevPictureID = this.get('prevPictureID');
+    userEvent.prevPictureSec = this.get('prevPictureSec');
+    userEvent.pictureID=this.get('pictureID');
+    userEvent.pictureSec = this.get('pictureSec');
     userEvent.time = Date.now();
-    console.log("http://192.168.15.102:7379/SET/"+key+"/"+saferStringify(userEvent));
+    //console.log("http://192.168.15.102:7379/SET/"+key+"/"+saferStringify(userEvent));
     //push info to DB
     $.ajax({
       url: "http://192.168.15.102:7379/SET/"+key+"/"+saferStringify(userEvent),
-      complete: function(data){console.log(data)}
+      complete: function(data){
+    
+      }
     });
-    this.set({pictureClicked: pictureName});
-    this.set({pictureLocation: pictureLocation});
+    
+    setPics(this.get('picNum'));
   },
   setUser: function(user){
     this.set({user: user});
   },
   setPictureTopic: function(string){
     this.set({pictureTopic: string});
+  },
+  setPics: function(pics){
+    this.set({pics: pics});
+  },
+  setPicDets: function(newPictureID, newPictureSec,pictureName, pictureLocation, picNum){
+    this.set({
+       pictureID: newPictureID,
+       pictureSec: newPictureSec,
+       pictureName: pictureName,
+       pictureLocation: pictureLocation,
+       picNum: picNum
+       });
+      
+  },
+  setPrevPics: function(oldPictureID, oldPictureSec){
+    this.set({
+      prevPictureID: oldPictureID,
+      prevPictureSec: oldPictureSec
+    })
   }
- 
+  
 });
 
 
@@ -67,22 +91,24 @@ $(document).ready(function() {
     $.cookie('UID', rUID, {expires: 365});
     
     //set some geovariables
-    /*$.cookie('lat', geoplugin_latitude(), {expires: 365});
-    $.cookie('long', geoplugin_longitude(), {expires: 365});
-    $.cookie('city', geoplugin_city(), {expires: 365});
-    $.cookie('region', geoplugin_region(), {expires: 365});
-    $.cookie('country', geoplugin_countryCode(), {expires: 365});*/
+    if(window.location.host!=""){
+      $.cookie('lat', geoplugin_latitude(), {expires: 365});
+      $.cookie('long', geoplugin_longitude(), {expires: 365});
+      $.cookie('city', geoplugin_city(), {expires: 365});
+      $.cookie('region', geoplugin_region(), {expires: 365});
+      $.cookie('country', geoplugin_countryCode(), {expires: 365});
+    }
     pictureBB.setUser($.cookie());
   }else{
     pictureBB.setUser($.cookie());
   }
   
   //random starting pictures from flickr "puppies"
-  getPics();
+  getPics(0);
   
   
   //and do the rest of the app
-  
+  /*
   $('.firstpicture').click(function(event){
     console.log('p1Click');
     pictureBB.pictureClick(this.attributes.src.value, 'p1');
@@ -97,7 +123,8 @@ $(document).ready(function() {
   $('.sidepicture').click( function(event){
     pictureBB.pictureClick(this.attributes.src.value, 'sidePicture')
     console.log('sidePClick');
-  })
+  })*/
+ 
   
   $('#submitBtn').click(function(e){
     pictureBB.setPictureTopic($('#searchText').val());
@@ -108,14 +135,50 @@ $(document).ready(function() {
     }
   });
 });
-
-getPics = function(){
-   getPicsSub = function(num, picturePlace, size){
-      $.getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key="+apiKey+"&text="+
+setClicks = function(){
+  $('.firstpicture').click(function(event){
+    console.log('p1Click');
+    pictureBB.setPrevPics(pictureBB.get('pictureID'), pictureBB.get('pictureSec'));
+    pictureBB.setPicDets(this.attributes.picID.value, this.attributes.picSec.value,
+          this.attributes.src.value, 'p1', this.attributes.picnum.value);
+    
+  });
+  $('.secondpicture').click(function(event){
+    pictureBB.setPrevPics(pictureBB.get('pictureID'), pictureBB.get('pictureSec'));
+    pictureBB.setPicDets(this.attributes.picID.value, this.attributes.picSec.value,
+          this.attributes.src.value, 'p2', this.attributes.picnum.value);
+    console.log('p2Click');
+  })
+  $('.sidepicture').click( function(event){
+    pictureBB.setPrevPics(pictureBB.get('pictureID'), pictureBB.get('pictureSec'));
+    pictureBB.setPicDets(this.attributes.picID.value, this.attributes.picSec.value,
+          this.attributes.src.value, 'sidePicture', this.attributes.picnum.value);
+  })
+}
+getPics = function(){  
+   $.getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key="+apiKey+"&text="+
         pictureBB.get('pictureTopic')+"&format=json&jsoncallback=?", 
         function(data){
+          var pics=data.photos.photo;
+          pictureBB.setPics(pics);
+       
+        });
+}
+setPics = function(mainPic){
+  var pics = pictureBB.get('pics');
+  getPicsSub(mainPic, $('#mainPhoto'), 'large', pics, 'noclass');
+          getPicsSub(Math.round((pics.length-1)*Math.random(), 2),$('#firstOption'), 'medium', pics, 'firstpicture');
+          getPicsSub(Math.round((pics.length-1)*Math.random(), 2), $('#secondOption'), 'medium', pics, 'secondpicture');
+
+          for (i = 0; i < 6; i++) { 
+              //fill in some sidebar options
+             getPicsSub(Math.round((pics.length-1)*Math.random(), 2), $('#side'+i), 'small', pics, 'sidepicture');
+          }
+}
+getPicsSub = function(num, picturePlace, size, pics, linkclass){
+
           //append the first item to the main picture, the second to the first of the two options... and so on 
-          item = data.photos.photo[num];
+          item = pics[num];
           var photoURL = 'http://farm' + item.farm + '.static.flickr.com/' + item.server + '/' + item.id + '_' + item.secret + '_m.jpg';
           //get photo info
           info = $.getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.getSizes&api_key="+apiKey+
@@ -126,39 +189,34 @@ getPics = function(){
                     switch(size) {
                         case "small":
                             pic=data.sizes.size[0];
+                            sf=1
                             break;
                         case "medium":
                             pic=data.sizes.size[1];
+                            sf=1
                             break;
                         case "large":
-                            pic=data.sizes.size[data.sizes.size.length-1];
+                            pic=data.sizes.size[data.sizes.size.length-2];
+                            sf=1/(pic.width/picturePlace.width());
                             break;
                     }
                     
                     //scale height and width to the available size constrained by proportion
                     //TODO
                     
-                    var imgCont = '<img src="'+pic.source+'" height="'+pic.height+'" width="'+pic.width+'">';
-                      //append the 'imgCont' variable to the document
-                       //$(imgCont).appendTo($('#mainPhoto'));
-                       picturePlace.html($(imgCont));
-                      return {};
+                    var imgCont = '<a href="#"><img src="'+pic.source+
+                                  '" height="'+pic.height*sf+'" width="'+pic.width*sf+
+                                  '" class="'+linkclass+
+                                  '" picNum="'+num+
+                                  '" picID="'+item.id+
+                                  '" picSec="'+item.secret+'"></a>';
+                      //insert the 'imgCont' variable to the document
+                      picturePlace.html($(imgCont));
+                      setClicks();
                     });
           
           
-        }    
-  );
    }
-   getPicsSub(0, $('#mainPhoto'), 'large');
-   getPicsSub(1,$('#firstOption'), 'medium');
-   getPicsSub(2, $('#secondOption'), 'medium');
-   
-   for (i = 0; i < 6; i++) { 
-      //fill in some sidebar options
-      getPicsSub(i+3, $('#side'+i), 'small');
-  }
-}
-
 saferStringify = function(obj, replacer, space) {
     return JSON.stringify(obj, replacer, space).replace(new RegExp('/', 'g'), '||')
     // Escape u2028 and u2029
