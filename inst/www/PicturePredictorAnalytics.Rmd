@@ -19,14 +19,16 @@ library(ggplot2)
 library(RJSONIO)
 library(knitr)
 library(shiny)
+library(lubridate)
 redisConnect()
 #getData from the DB
 
 ppkeys = redisKeys('pp:*')
+data = redisMGet(ppkeys)
 data = redisMGet(ppkeys[-grep("undefined", ppkeys)])
 
 #put the unstructured data into a DF
-cols = c( "UID",             "lat",             "long",            "city",           
+cols = c( "UID",     "Session",        "lat",             "long",            "city",           
   "region",          "country",         "pictureName",     "pictureLocation",
   "pictureTopic",    "prevPictureID",   "prevPictureSec",  "pictureID"      ,
  "pictureSec",      "time")
@@ -34,16 +36,18 @@ cols = c( "UID",             "lat",             "long",            "city",
 
 dataDF = array(0, c(length(data), length(cols)))
 for(i in 1:length(data)){
-  dataDF[i, ] = unlist(fromJSON(data[[i]])[cols] )
+  dataDF[i, ] = unlist(fromJSON(data[[i]]))[cols] 
 }
 colnames(dataDF) = cols
 dataDF = as.data.frame(dataDF)
 
 dataDF$time = as.numeric(as.character(dataDF$time))
 
+dataDF$timeDate = as.POSIXct(dataDF$time/1000, origin="1970-01-01")
+
 ```
 
-### By IDs
+### By Unique Users
 
 ```{r echo=FALSE}
 byIDs = dataDF %.%
@@ -51,9 +55,140 @@ byIDs = dataDF %.%
   group_by(UID) %.%
   summarize(picturesClicked=length(UID),
             topics=length(unique(pictureTopic)),
-            medTimeBetweenClicks=quantile(ifelse(diff((time))>60*1000, NA, diff((time))/1000),.5,na.rm = T)
+            medTimeBetweenClicks=quantile(ifelse(diff((time))>60*1000, NA, diff((time))/1000),.5,na.rm = T),
+            totalTime=(max(time)-min(time))/1000
             )
             
-  renderDataTable({byIDs})
+  #renderDataTable({byIDs})
+
+byIDsSummary = byIDs %.%
+  summarize(medianClicked=quantile(picturesClicked, .5),
+            sdClicked=sd(picturesClicked),
+            medianTopics=quantile(topics, .5),
+            medianTimeBetweenClicks=quantile(medTimeBetweenClicks, .5),
+            sdTimeBetweenClicks=sd(medTimeBetweenClicks),
+            medianTotalTime=quantile(totalTime, .5),
+            sdTotalTime=sd(totalTime)
+            )
+renderDataTable({byIDsSummary})
+```
+
+### By Unique Sessions
+
+```{r echo=FALSE}
+
+bySession = dataDF %.%
+  arrange(time) %.%
+  group_by(Session) %.%
+  summarize(picturesClicked=length(UID),
+            topics=length(unique(pictureTopic)),
+            medTimeBetweenClicks=quantile(ifelse(diff((time))>60*1000, NA, diff((time))/1000),.5,na.rm = T),
+            totalTime=(max(time)-min(time))/1000
+            ) %.%
+   summarize(medianClicked=quantile(picturesClicked, .5),
+            sdClicked=sd(picturesClicked),
+            medianTopics=quantile(topics, .5),
+            medianTimeBetweenClicks=quantile(medTimeBetweenClicks, .5),
+            sdTimeBetweenClicks=sd(medTimeBetweenClicks),
+            medianTotalTime=quantile(totalTime, .5),
+            sdTotalTime=sd(totalTime)
+            )
+            
+  renderDataTable({bySession})
+
 
 ```
+
+### By GeoRegion
+
+```{r echo=FALSE}
+
+byRegion = dataDF %.%
+  arrange(time) %.%
+  group_by(city, region) %.%
+  summarize(picturesClicked=length(UID),
+            topics=length(unique(pictureTopic)),
+            medTimeBetweenClicks=quantile(ifelse(diff((time))>60*1000, NA, diff((time))/1000),.5,na.rm = T),
+            totalTime=(max(time)-min(time))/1000
+            ) %.%
+  arrange(desc(picturesClicked))
+# %.%
+#    summarize(medianClicked=quantile(picturesClicked, .5),
+#             sdClicked=sd(picturesClicked),
+#             medianTopics=quantile(topics, .5),
+#             medianTimeBetweenClicks=quantile(medTimeBetweenClicks, .5),
+#             sdTimeBetweenClicks=sd(medTimeBetweenClicks),
+#             medianTotalTime=quantile(totalTime, .5),
+#             sdTotalTime=sd(totalTime)
+#             )
+            
+  renderDataTable({byRegion})
+
+
+```
+### By Picture Location
+
+```{r echo=FALSE}
+
+## need to change these metrics to be calculated per session or topic and given as a proportion
+byPicLocation = dataDF %.%
+  arrange(time) %.%
+  group_by(pictureLocation) %.%
+  summarize(picturesClicked=length(UID),
+            topics=length(unique(pictureTopic)),
+            medTimeBetweenClicks=quantile(ifelse(diff((time))>60*1000, NA, diff((time))/1000),.5,na.rm = T),
+            totalTime=(max(time)-min(time))/1000
+            ) %.%
+  arrange(desc(picturesClicked))
+# %.%
+#    summarize(medianClicked=quantile(picturesClicked, .5),
+#             sdClicked=sd(picturesClicked),
+#             medianTopics=quantile(topics, .5),
+#             medianTimeBetweenClicks=quantile(medTimeBetweenClicks, .5),
+#             sdTimeBetweenClicks=sd(medTimeBetweenClicks),
+#             medianTotalTime=quantile(totalTime, .5),
+#             sdTotalTime=sd(totalTime)
+#             )
+            
+  renderDataTable({byPicLocation})
+
+
+```
+
+
+### By Search Phrase
+```{r echo=FALSE}
+#also need to change this to the proportion of the user's time rather than a straight up calculation
+
+byTopic = dataDF %.%
+  arrange(time) %.%
+  group_by(pictureTopic) %.%
+  summarize(picturesClicked=length(UID),
+            #topics=length(unique(pictureTopic)),
+            medTimeBetweenClicks=quantile(ifelse(diff((time))>60*1000, NA, diff((time))/1000),.5,na.rm = T),
+            totalTime=(max(time)-min(time))/1000
+            ) %.%
+  arrange(desc(picturesClicked))
+# %.%
+#    summarize(medianClicked=quantile(picturesClicked, .5),
+#             sdClicked=sd(picturesClicked),
+#             medianTopics=quantile(topics, .5),
+#             medianTimeBetweenClicks=quantile(medTimeBetweenClicks, .5),
+#             sdTimeBetweenClicks=sd(medTimeBetweenClicks),
+#             medianTotalTime=quantile(totalTime, .5),
+#             sdTotalTime=sd(totalTime)
+#             )
+            
+  renderDataTable({byTopic})
+
+
+```
+
+### By Picture (and PrevPicture)
+
+
+### This picture goes to these pictures (first column is the "prevPicture", 2,3,4,5 columns are the most probably next pictures)
+
+### Views over Time
+
+### Predictive Modeling

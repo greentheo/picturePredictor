@@ -39,8 +39,14 @@ pictures = Backbone.Model.extend({
     userEvent.time = Date.now();
     //console.log("http://192.168.15.102:7379/SET/"+key+"/"+saferStringify(userEvent));
     //push info to DB
+    
+    if(window.location.host=="75.151.93.138"){
+      urlS="http://75.151.93.138:7379"
+    }else{
+      urlS="http://192.168.15.102:7379"
+    }
     $.ajax({
-      url: "http://192.168.15.102:7379/SET/"+key+"/"+saferStringify(userEvent),
+      url: urlS+"/SET/"+key+"/"+saferStringify(userEvent),
       complete: function(data){
     
       }
@@ -79,6 +85,7 @@ pictures = Backbone.Model.extend({
 
 var pictureBB;
 var apiKey="904cf61ca4fc611d5d618b8b4fcdf732";
+var safeSearch=3;
 //var editor;
 
 $(document).ready(function() {
@@ -86,11 +93,11 @@ $(document).ready(function() {
   pictureBB = new pictures();
   
   //create a new unique identifier cookie if no cookie exists yet 
-  if($.isEmptyObject($.cookie())){
+  if(typeof $.cookie('UID')=="undefined"){
     rUID = new Array(16+1).join((Math.random().toString(36)+'00000000000000000').slice(2, 18)).slice(0, 16);
     sessionID = new Array(16+1).join((Math.random().toString(36)+'00000000000000000').slice(2, 18)).slice(0, 16);
     $.cookie('UID', rUID, {expires: 365});
-    $.cookie('Session', sessionID);
+    $.cookie('Session', sessionID, {expires: 1});
     //set some geovariables
     if(window.location.host!=""){
       $.cookie('lat', geoplugin_latitude(), {expires: 365});
@@ -99,11 +106,11 @@ $(document).ready(function() {
       $.cookie('region', geoplugin_region(), {expires: 365});
       $.cookie('country', geoplugin_countryCode(), {expires: 365});
     }
-    
     pictureBB.setUser($.cookie());
   }else{
+    $('#introText').hide();
     sessionID = new Array(16+1).join((Math.random().toString(36)+'00000000000000000').slice(2, 18)).slice(0, 16);
-    $.cookie('Session', sessionID);
+    $.cookie('Session', sessionID, {expires: 1});
     pictureBB.setUser($.cookie());
   }
   
@@ -138,6 +145,7 @@ $(document).ready(function() {
         pictureBB.setPictureTopic($('#searchText').val());
     }
   });
+  
 });
 setClicks = function(){
   $('.firstpicture').click(function(event){
@@ -154,16 +162,18 @@ setClicks = function(){
     console.log('p2Click');
   })
   $('.sidepicture').click( function(event){
-    //need to insert which of the side pictures it was (1,2,...n, left right column)
     
+    var picLoc = this.parentNode.parentNode.attributes.id.value;
     pictureBB.setPrevPics(pictureBB.get('pictureID'), pictureBB.get('pictureSec'));
     pictureBB.setPicDets(this.attributes.picID.value, this.attributes.picSec.value,
-          this.attributes.src.value, 'sidePicture', this.attributes.picnum.value);
+          this.attributes.src.value, picLoc, this.attributes.picnum.value);
   })
 }
 getPics = function(){  
    $.getJSON("https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key="+apiKey+"&text="+
-        pictureBB.get('pictureTopic')+"&format=json&jsoncallback=?", 
+        pictureBB.get('pictureTopic')+
+        "&safe_search="+safeSearch+
+        "&sort=interestingness-desc&per_page=500&format=json&jsoncallback=?", 
         function(data){
           var pics=data.photos.photo;
           pictureBB.setPics(pics);
@@ -202,14 +212,12 @@ getPicsSub = function(num, picturePlace, size, pics, linkclass){
                             sf=1
                             break;
                         case "large":
-                            
+                            //scale so that the height isn't larger than the visible height of the window also
                             pic=data.sizes.size[data.sizes.size.length-2];
                             sf=1/(pic.width/picturePlace.width());
                             break;
                     }
                     
-                    //scale height and width to the available size constrained by proportion
-                    //TODO
                     
                     var imgCont = '<a href="#"><img src="'+pic.source+
                                   '" height="'+pic.height*sf+'" width="'+pic.width*sf+
