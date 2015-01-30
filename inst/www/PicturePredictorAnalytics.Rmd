@@ -1,0 +1,59 @@
+---
+title: "Picture Predictor Analytics"
+author: "Theo Van Rooy"
+date: "1/29/2015"
+output: html_document
+runtime: shiny
+---
+
+This document gives some basic stats, plots and information about the data collected by the Picture Prediction app.
+
+Also, some interactive modeling
+
+## Basic Stats
+
+```{r echo=FALSE}
+library(rredis)
+library(dplyr)
+library(ggplot2)
+library(RJSONIO)
+library(knitr)
+library(shiny)
+redisConnect()
+#getData from the DB
+
+ppkeys = redisKeys('pp:*')
+data = redisMGet(ppkeys[-grep("undefined", ppkeys)])
+
+#put the unstructured data into a DF
+cols = c( "UID",             "lat",             "long",            "city",           
+  "region",          "country",         "pictureName",     "pictureLocation",
+  "pictureTopic",    "prevPictureID",   "prevPictureSec",  "pictureID"      ,
+ "pictureSec",      "time")
+
+
+dataDF = array(0, c(length(data), length(cols)))
+for(i in 1:length(data)){
+  dataDF[i, ] = unlist(fromJSON(data[[i]])[cols] )
+}
+colnames(dataDF) = cols
+dataDF = as.data.frame(dataDF)
+
+dataDF$time = as.numeric(as.character(dataDF$time))
+
+```
+
+### By IDs
+
+```{r echo=FALSE}
+byIDs = dataDF %.%
+  arrange(time) %.%
+  group_by(UID) %.%
+  summarize(picturesClicked=length(UID),
+            topics=length(unique(pictureTopic)),
+            medTimeBetweenClicks=quantile(ifelse(diff((time))>60*1000, NA, diff((time))/1000),.5,na.rm = T)
+            )
+            
+  renderDataTable({byIDs})
+
+```

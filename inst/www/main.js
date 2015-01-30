@@ -87,9 +87,10 @@ $(document).ready(function() {
   
   //create a new unique identifier cookie if no cookie exists yet 
   if($.isEmptyObject($.cookie())){
-    rUID = new Array(16+1).join((Math.random().toString(36)+'00000000000000000').slice(2, 18)).slice(0, 16)
+    rUID = new Array(16+1).join((Math.random().toString(36)+'00000000000000000').slice(2, 18)).slice(0, 16);
+    sessionID = new Array(16+1).join((Math.random().toString(36)+'00000000000000000').slice(2, 18)).slice(0, 16);
     $.cookie('UID', rUID, {expires: 365});
-    
+    $.cookie('Session', sessionID);
     //set some geovariables
     if(window.location.host!=""){
       $.cookie('lat', geoplugin_latitude(), {expires: 365});
@@ -98,8 +99,11 @@ $(document).ready(function() {
       $.cookie('region', geoplugin_region(), {expires: 365});
       $.cookie('country', geoplugin_countryCode(), {expires: 365});
     }
+    
     pictureBB.setUser($.cookie());
   }else{
+    sessionID = new Array(16+1).join((Math.random().toString(36)+'00000000000000000').slice(2, 18)).slice(0, 16);
+    $.cookie('Session', sessionID);
     pictureBB.setUser($.cookie());
   }
   
@@ -150,6 +154,8 @@ setClicks = function(){
     console.log('p2Click');
   })
   $('.sidepicture').click( function(event){
+    //need to insert which of the side pictures it was (1,2,...n, left right column)
+    
     pictureBB.setPrevPics(pictureBB.get('pictureID'), pictureBB.get('pictureSec'));
     pictureBB.setPicDets(this.attributes.picID.value, this.attributes.picSec.value,
           this.attributes.src.value, 'sidePicture', this.attributes.picnum.value);
@@ -167,10 +173,10 @@ getPics = function(){
 setPics = function(mainPic){
   var pics = pictureBB.get('pics');
   getPicsSub(mainPic, $('#mainPhoto'), 'large', pics, 'noclass');
-          getPicsSub(Math.round((pics.length-1)*Math.random(), 2),$('#firstOption'), 'medium', pics, 'firstpicture');
-          getPicsSub(Math.round((pics.length-1)*Math.random(), 2), $('#secondOption'), 'medium', pics, 'secondpicture');
+          //getPicsSub(Math.round((pics.length-1)*Math.random(), 2),$('#firstOption'), 'medium', pics, 'firstpicture');
+          //getPicsSub(Math.round((pics.length-1)*Math.random(), 2), $('#secondOption'), 'medium', pics, 'secondpicture');
 
-          for (i = 0; i < 6; i++) { 
+          for (i = 0; i < 12; i++) { 
               //fill in some sidebar options
              getPicsSub(Math.round((pics.length-1)*Math.random(), 2), $('#side'+i), 'small', pics, 'sidepicture');
           }
@@ -196,6 +202,7 @@ getPicsSub = function(num, picturePlace, size, pics, linkclass){
                             sf=1
                             break;
                         case "large":
+                            
                             pic=data.sizes.size[data.sizes.size.length-2];
                             sf=1/(pic.width/picturePlace.width());
                             break;
