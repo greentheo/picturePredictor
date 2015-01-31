@@ -39,17 +39,8 @@ pictures = Backbone.Model.extend({
     userEvent.time = Date.now();
     //console.log("http://192.168.15.102:7379/SET/"+key+"/"+saferStringify(userEvent));
     //push info to DB
-    
-    if(window.location.host=="75.151.93.138"){
-      urlS="http://75.151.93.138:7379"
-    }else{
-      urlS="http://192.168.15.102:7379"
-    }
-    $.ajax({
-      url: urlS+"/SET/"+key+"/"+saferStringify(userEvent),
-      complete: function(data){
-    
-      }
+    ocpu.call('storeInDB', {key: key, value: saferStringify(userEvent)}, function(session){
+      console.log(session);
     });
     
     setPics(this.get('picNum'));

@@ -24,7 +24,7 @@ redisConnect()
 #getData from the DB
 
 ppkeys = redisKeys('pp:*')
-data = redisMGet(ppkeys)
+#data = redisMGet(ppkeys)
 data = redisMGet(ppkeys[-grep("undefined", ppkeys)])
 
 #put the unstructured data into a DF
@@ -54,21 +54,27 @@ byIDs = dataDF %.%
   arrange(time) %.%
   group_by(UID) %.%
   summarize(picturesClicked=length(UID),
+            sessions=length(unique(Session)),
             topics=length(unique(pictureTopic)),
             medTimeBetweenClicks=quantile(ifelse(diff((time))>60*1000, NA, diff((time))/1000),.5,na.rm = T),
             totalTime=(max(time)-min(time))/1000
-            )
+            ) %.%
+  mutate(activeTime=medTimeBetweenClicks*picturesClicked)
             
-  #renderDataTable({byIDs})
+  renderDataTable({byIDs})
 
 byIDsSummary = byIDs %.%
-  summarize(medianClicked=quantile(picturesClicked, .5),
+  summarize(uniqueIDs=length(UID),
+            medianSessionsperID=quantile(sessions, .5),
+            medianClicked=quantile(picturesClicked, .5),
             sdClicked=sd(picturesClicked),
             medianTopics=quantile(topics, .5),
             medianTimeBetweenClicks=quantile(medTimeBetweenClicks, .5),
             sdTimeBetweenClicks=sd(medTimeBetweenClicks),
             medianTotalTime=quantile(totalTime, .5),
-            sdTotalTime=sd(totalTime)
+            sdTotalTime=sd(totalTime),
+            medianActiveTime=quantile(activeTime, .5),
+            sdActiveTime=sd(medianActiveTime)
             )
 renderDataTable({byIDsSummary})
 ```
@@ -87,10 +93,10 @@ bySession = dataDF %.%
             ) %.%
    summarize(medianClicked=quantile(picturesClicked, .5),
             sdClicked=sd(picturesClicked),
-            medianTopics=quantile(topics, .5),
-            medianTimeBetweenClicks=quantile(medTimeBetweenClicks, .5),
+            medianTopics=quantile(topics, .5,na.rm = T),
+            medianTimeBetweenClicks=quantile(medTimeBetweenClicks, .5,na.rm = T),
             sdTimeBetweenClicks=sd(medTimeBetweenClicks),
-            medianTotalTime=quantile(totalTime, .5),
+            medianTotalTime=quantile(totalTime, .5,na.rm = T),
             sdTotalTime=sd(totalTime)
             )
             
