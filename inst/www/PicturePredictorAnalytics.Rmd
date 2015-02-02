@@ -65,15 +65,15 @@ byIDs = dataDF %.%
 
 byIDsSummary = byIDs %.%
   summarize(uniqueIDs=length(UID),
-            medianSessionsperID=quantile(sessions, .5),
-            medianClicked=quantile(picturesClicked, .5),
+            medianSessionsperID=quantile(sessions, .5,na.rm = T),
+            medianClicked=quantile(picturesClicked, .5,na.rm = T),
             sdClicked=sd(picturesClicked),
-            medianTopics=quantile(topics, .5),
-            medianTimeBetweenClicks=quantile(medTimeBetweenClicks, .5),
+            medianTopics=quantile(topics, .5,na.rm = T),
+            medianTimeBetweenClicks=quantile(medTimeBetweenClicks, .5,na.rm = T),
             sdTimeBetweenClicks=sd(medTimeBetweenClicks),
-            medianTotalTime=quantile(totalTime, .5),
+            medianTotalTime=quantile(totalTime, .5,na.rm = T),
             sdTotalTime=sd(totalTime),
-            medianActiveTime=quantile(activeTime, .5),
+            medianActiveTime=quantile(activeTime, .5,na.rm = T),
             sdActiveTime=sd(medianActiveTime)
             )
 renderDataTable({byIDsSummary})
