@@ -20,6 +20,8 @@ library(RJSONIO)
 library(knitr)
 library(shiny)
 library(lubridate)
+library(yhatr)
+
 redisConnect()
 #getData from the DB
 
@@ -44,6 +46,7 @@ dataDF = as.data.frame(dataDF)
 dataDF$time = as.numeric(as.character(dataDF$time))
 
 dataDF$timeDate = as.POSIXct(dataDF$time/1000, origin="1970-01-01")
+rownames(dataDF)=ppkeys[-grep("undefined", ppkeys)]
 
 ```
 
@@ -163,7 +166,7 @@ byPicLocation = dataDF %.%
 
 
 ### By Search Phrase
-```{r echo=FALSE}
+```{r echo=FALSE, eval=FALSE}
 #also need to change this to the proportion of the user's time rather than a straight up calculation
 
 byTopic = dataDF %.%
@@ -192,6 +195,42 @@ byTopic = dataDF %.%
 
 ### By Picture (and PrevPicture)
 
+```{r}
+probTab = dataDF %>%
+  group_by(pictureTopic, prevPictureID, pictureID) %>%
+  summarize(count=length(pictureID)) %>%
+  group_by(pictureTopic, prevPictureID) %>%
+  mutate(postProb=count/sum(count)) %>%
+  group_by(pictureTopic) %>%
+  mutate(priorProb=count/sum(count)) %>%
+  arrange(priorProb)
+
+#predictive model upload to yhat
+
+  model.require <- function() {
+    library(dplyr)
+  }
+  
+  model.transform <- function(){
+  }
+  
+  model.predict <- function(req) {
+    priorpics = probTab %>% filter(pictureTopic==req$topic)
+    postpics = probTab %>% filter(prevPictureID==req$pictureID)
+    
+    #pick up to 12 from postpics, if more than 12... sample
+    postpicIDs = na.omit(ifelse(runif(nrow(postpics))<postpics$postProb, postpics$pictureID,NA))
+    if(length(postpicIDs)>=6){
+      postpicIDs = sample(postpicIDs, 6)
+    }else{
+      
+    }
+      #if less than 6 pick up to 6-num_postPics from priorPics... if more than slots available...sample
+    
+    #everything else is chosen randomly client side
+  }
+
+```
 
 ### This picture goes to these pictures (first column is the "prevPicture", 2,3,4,5 columns are the most probably next pictures)
 
